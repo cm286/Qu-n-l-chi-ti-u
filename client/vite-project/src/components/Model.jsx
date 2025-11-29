@@ -2,7 +2,8 @@ import { X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { categories as CATEGORY_LIST } from '../utils/categoryLabels'
 
-function Model({ isOpen, onsubmit, initialData, onclose }) {
+
+function Model({ isOpen, onsubmit, initialData, onclose, customCategories = [], categoryBudgets = {}, selectedMonth = '', expenses = [] }) {
   const empty = {
     description: '',
     amount: '',
@@ -11,12 +12,21 @@ function Model({ isOpen, onsubmit, initialData, onclose }) {
     notes: '',
   }
 
-  const categories = CATEGORY_LIST
+  // Lấy tất cả danh mục (mặc định + custom)
+  const defaultCategories = CATEGORY_LIST
+  const allCategories = [
+    ...defaultCategories,
+    ...customCategories.map(cat => ({ value: cat, label: cat }))
+  ]
   const [formData, setFormData] = useState(initialData || empty)
+  const [warning, setWarning] = useState('')
+  const [forceSubmit, setForceSubmit] = useState(false)
 
   useEffect(() => {
     setFormData(initialData || empty)
-  }, [initialData])
+    setWarning('')
+    setForceSubmit(false)
+  }, [initialData, isOpen])
 
   if (!isOpen) return null
 
@@ -25,16 +35,49 @@ function Model({ isOpen, onsubmit, initialData, onclose }) {
       alert('Please fill in required fields')
       return
     }
+    const numericAmount = parseFloat(formData.amount.toString().replace(/\./g, ''))
+
+    // Check category budget for the selected month
+    const monthBudgets = categoryBudgets[selectedMonth] || {}
+    const budgetForCategory = Number(monthBudgets[formData.category] || 0)
+
+    if (budgetForCategory > 0) {
+      const existingTotal = (expenses || [])
+        .filter((e) => (e.date || '').startsWith(selectedMonth) && e.category === formData.category)
+        .reduce((s, e) => s + Number(e.amount || 0), 0)
+
+      const newTotal = existingTotal + numericAmount
+      if (newTotal > budgetForCategory && !forceSubmit) {
+        const warningMsg = `Bạn sẽ vượt định mức danh mục "${formData.category}" cho ${new Intl.DateTimeFormat('vi-VN', { month: '2-digit', year: 'numeric' }).format(new Date(selectedMonth + '-01'))}. Định mức: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(budgetForCategory)}, Tổng sau khi thêm: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(newTotal)}.`
+        setWarning(warningMsg)
+        setForceSubmit(true)
+        return
+      }
+    }
+
     onsubmit({
       ...formData,
-      amount: parseFloat(formData.amount.toString().replace(/\./g, '')),
+      amount: numericAmount,
     })
+    setWarning('')
+    setForceSubmit(false)
   }
 
   const formatAmount = (value) => {
     const num = value.toString().replace(/\./g, '')
     if (num === '' || isNaN(num)) return ''
     return new Intl.NumberFormat('vi-VN').format(num)
+  }
+
+  // Tính số tiền còn lại cho mỗi danh mục
+  const getRemaining = (catValue) => {
+    const monthBudgets = categoryBudgets[selectedMonth] || {}
+    const budget = Number(monthBudgets[catValue] || 0)
+    if (!budget) return null
+    const spent = (expenses || [])
+      .filter((e) => (e.date || '').startsWith(selectedMonth) && e.category === catValue)
+      .reduce((s, e) => s + Number(e.amount || 0), 0)
+    return budget - spent
   }
 
   return (
@@ -126,20 +169,29 @@ function Model({ isOpen, onsubmit, initialData, onclose }) {
               Loại
             </label>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-              {categories.map((cat) => (
-                <button
-                  key={cat.value}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, category: cat.value })}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                    formData.category === cat.value
-                      ? 'bg-indigo-600 text-white scale-105 shadow-lg'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
+              {allCategories.map((cat) => {
+                const remaining = getRemaining(cat.value)
+                return (
+                  <div key={cat.value} className="flex flex-col items-center">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, category: cat.value })}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                        formData.category === cat.value
+                          ? 'bg-indigo-600 text-white scale-105 shadow-lg'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                    {remaining !== null && (
+                      <span className="text-[10px] text-gray-500 mt-1">
+                        Còn lại: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Math.max(remaining, 0))}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
 
@@ -159,6 +211,13 @@ function Model({ isOpen, onsubmit, initialData, onclose }) {
               rounded-xl focus:outline-none focus:border-indigo-500"
             />
           </div>
+
+          {/* Warning message */}
+          {warning && (
+            <div className="text-red-600 text-sm font-semibold bg-red-50 border border-red-200 rounded-xl p-3 mb-2">
+              {warning} Nếu bạn muốn tiếp tục, hãy nhấn "Lưu thay đổi" lần nữa.
+            </div>
+          )}
 
           {/* Buttons */}
           <div className="flex gap-3 mt-4">

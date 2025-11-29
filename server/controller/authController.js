@@ -4,7 +4,14 @@ const jwt = require('jsonwebtoken');
 // 🎫 Tạo JWT token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '7d',
+    expiresIn: process.env.JWT_EXPIRES_IN || '30d',
+  });
+};
+
+// 🎫 Tạo refresh token (lâu hơn)
+const generateRefreshToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET, {
+    expiresIn: '30d',
   });
 };
 
@@ -20,8 +27,13 @@ exports.register = async (req, res) => {
 
     const user = await User.create({ name, email, password });
     const token = generateToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
 
-    res.status(201).json({ success: true, token, user: { id: user._id, name, email, avatar: user.avatar } });
+    // Lưu refresh token vào database
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    res.status(201).json({ success: true, token, refreshToken, user: { id: user._id, name, email, avatar: user.avatar } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -38,7 +50,65 @@ exports.login = async (req, res) => {
     }
 
     const token = generateToken(user._id);
-    res.json({ success: true, token, user: { id: user._id, name: user.name, email: user.email, avatar: user.avatar } });
+    const refreshToken = generateRefreshToken(user._id);
+
+    // Lưu refresh token
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    res.json({ success: true, token, refreshToken, user: { id: user._id, name: user.name, email: user.email, avatar: user.avatar } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 🔁 Refresh access token
+exports.refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(401).json({ success: false, message: 'Refresh token missing' });
+    }
+
+    // Xác thực refresh token
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ success: false, message: 'Refresh token expired' });
+      }
+      return res.status(401).json({ success: false, message: 'Invalid refresh token' });
+    }
+
+    const user = await User.findById(decoded.id).select('+refreshToken');
+    if (!user || !user.refreshToken || user.refreshToken !== refreshToken) {
+      return res.status(403).json({ success: false, message: 'Refresh token invalid or revoked' });
+    }
+
+    // Tạo access token mới
+    const token = generateToken(user._id);
+    res.json({ success: true, token });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 🔓 Logout (thu hồi refresh token)
+exports.logout = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ success: false, message: 'Refresh token required' });
+    }
+
+    const user = await User.findOne({ refreshToken });
+    if (user) {
+      user.refreshToken = null;
+      await user.save();
+    }
+
+    res.json({ success: true, message: 'Logged out successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

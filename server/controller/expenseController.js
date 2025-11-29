@@ -38,7 +38,11 @@ exports.createExpense = async (req, res) => {
     console.log("🧾 Payload tạo expense:", payload);
 
     const expense = await Expense.create(payload);
-    res.status(201).json({ success: true, data: expense });
+    
+    res.status(201).json({ 
+      success: true, 
+      data: expense
+    });
   } catch (error) {
     console.error("❌ Lỗi khi tạo expense:", error);
     res.status(500).json({ success: false, message: error.message });

@@ -22,6 +22,25 @@
       type: String,
       default: null
     }
+    ,
+    refreshToken: {
+      type: String,
+      default: null,
+      select: false
+    },
+    // 💰 Định mức cho từng danh mục
+    categoryBudgets: {
+      type: Map,
+      of: Number,
+      default: new Map([
+        ['Food', 0],
+        ['Transport', 0],
+        ['Shopping', 0],
+        ['Entertaiment', 0],
+        ['Bills', 0],
+        ['Others', 0]
+      ])
+    }
   }, { timestamps: true });
 
   // 🔐 Hash password before save

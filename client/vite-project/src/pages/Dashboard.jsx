@@ -23,6 +23,8 @@ import UserProfile from '../components/UserProfile'
 import ChangePassword from '../components/ChangePassword'
 import EditProfile from '../components/EditProfile'
 import { fetchData, createData, deleteData, updateData } from '../api'
+import CategoryBudgetInfo from '../components/CategoryBudgetInfo'
+import { categories as CATEGORY_LIST } from '../utils/categoryLabels'
 
 // 🖼️ Thêm logo
 import logo from '../assets/favicon.png'
@@ -46,7 +48,25 @@ function Dashboard({ isDark, setIsDark }) {
       return {}
     }
   })
+  // categoryBudgets is now keyed by month: { 'YYYY-MM': { categoryName: amount, ... }, ... }
+  const [categoryBudgets, setCategoryBudgets] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('categoryBudgets')) || {}
+    } catch (e) {
+      return {}
+    }
+  })
+  const [customCategories, setCustomCategories] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('customCategories')) || []
+    } catch (e) {
+      return []
+    }
+  })
+  const [newCategoryInput, setNewCategoryInput] = useState('')
+  const [categoryWarnings, setCategoryWarnings] = useState([])
   const [limitInput, setLimitInput] = useState(null)
+  const [categoryBudgetInputs, setCategoryBudgetInputs] = useState({})
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('All')
   const [showAlert, setShowAlert] = useState(false)
@@ -65,7 +85,55 @@ function Dashboard({ isDark, setIsDark }) {
   // Sync limitInput when selectedMonth or monthlyLimits change
   useEffect(() => {
     setLimitInput(monthlyLimits[selectedMonth] ?? 1000)
-  }, [selectedMonth, monthlyLimits])
+    // Load category budgets for the selected month
+    const monthBudgets = categoryBudgets[selectedMonth] || {}
+    // Ensure all custom categories exist with default 0
+    const merged = { ...monthBudgets }
+    for (const c of customCategories) {
+      if (!(c in merged)) merged[c] = 0
+    }
+    // Also ensure default categories exist
+    const defaults = ['Food', 'Transport', 'Shopping', 'Entertaiment', 'Bills', 'Others']
+    for (const d of defaults) {
+      if (!(d in merged)) merged[d] = 0
+    }
+    setCategoryBudgetInputs(merged)
+  }, [selectedMonth, monthlyLimits, categoryBudgets, customCategories])
+
+  // ⚠️ Kiểm tra cảnh báo vượt định mức danh mục cho tháng được chọn
+  useEffect(() => {
+    const monthKey = selectedMonth
+    const warnings = []
+    const categories = ['Food', 'Transport', 'Shopping', 'Entertaiment', 'Bills', 'Others', ...customCategories]
+
+    const monthBudgets = categoryBudgets[monthKey] || {}
+
+    for (const category of categories) {
+      const budget = Number(monthBudgets[category] || 0)
+      if (budget > 0) {
+        const categoryExpenses = expenses
+          .filter((e) => {
+            const eDate = e.date ? String(e.date) : ''
+            return eDate.startsWith(monthKey) && e.category === category
+          })
+          .reduce((sum, e) => sum + Number(e.amount || 0), 0)
+
+        if (categoryExpenses > budget) {
+          warnings.push({
+            type: 'CATEGORY_BUDGET_EXCEEDED',
+            message: `Chi tiêu danh mục "${category}" đã vượt quá định mức!`,
+            category,
+            budgetLimit: budget,
+            currentTotal: categoryExpenses,
+            newTotal: categoryExpenses,
+            exceedAmount: categoryExpenses - budget,
+          })
+        }
+      }
+    }
+
+    setCategoryWarnings(warnings)
+  }, [expenses, categoryBudgets, selectedMonth, customCategories])
 
   const formatMonthVN = (ym) => {
     try {
@@ -158,12 +226,12 @@ function Dashboard({ isDark, setIsDark }) {
 
   // 🗑️ Xóa chi tiêu
   const handleDeleteExpense = async (id) => {
-    if (!window.confirm('Delete this expense?')) return
+    if (!window.confirm('Bạn chắc chắn muốn xóa chi tiêu này?')) return
     try {
       await deleteData(id)
       setExpenses((prev) => prev.filter((e) => e._id !== id))
     } catch (error) {
-      console.error('Error deleting expense:', error)
+      console.error('Lỗi khi xóa chi tiêu:', error)
     }
   }
 
@@ -182,33 +250,121 @@ function Dashboard({ isDark, setIsDark }) {
     const updated = { ...monthlyLimits, [selectedMonth]: newLimit }
     setMonthlyLimits(updated)
     localStorage.setItem('monthlyLimits', JSON.stringify(updated))
+  }
+
+  // 💰 Lưu định mức danh mục cho tháng đang chọn
+  const handleSaveCategoryBudgets = (e) => {
+    e.preventDefault()
+    const updated = { ...(categoryBudgets || {}) }
+    updated[selectedMonth] = { ...(categoryBudgetInputs || {}) }
+    setCategoryBudgets(updated)
+    localStorage.setItem('categoryBudgets', JSON.stringify(updated))
     setIsLimitOpen(false)
   }
 
+  // ➕ Thêm danh mục mới
+  const handleAddCategory = () => {
+    if (!newCategoryInput.trim()) {
+      alert('⚠️ Vui lòng nhập tên danh mục')
+      return
+    }
+
+    const categoryName = newCategoryInput.trim()
+    
+    // Kiểm tra danh mục đã tồn tại
+    const allCategories = ['Food', 'Transport', 'Shopping', 'Entertaiment', 'Bills', 'Others', ...customCategories]
+    if (allCategories.includes(categoryName)) {
+      alert('⚠️ Danh mục này đã tồn tại')
+      return
+    }
+
+    const updated = [...customCategories, categoryName]
+    setCustomCategories(updated)
+    localStorage.setItem('customCategories', JSON.stringify(updated))
+    
+    // Thêm vào categoryBudgetInputs
+    setCategoryBudgetInputs({
+      ...categoryBudgetInputs,
+      [categoryName]: 0
+    })
+    
+    setNewCategoryInput('')
+  }
+
+  // 🗑️ Xóa danh mục (bất kỳ danh mục nào)
+  const handleDeleteCategory = (categoryName) => {
+    if (!window.confirm(`Xóa danh mục "${categoryName}"?`)) return
+    
+    // Nếu là danh mục custom, xóa khỏi customCategories
+    if (customCategories.includes(categoryName)) {
+      const updated = customCategories.filter(cat => cat !== categoryName)
+      setCustomCategories(updated)
+      localStorage.setItem('customCategories', JSON.stringify(updated))
+    }
+
+    // Xóa khỏi categoryBudgetInputs (tháng hiện tại)
+    const newInputs = { ...categoryBudgetInputs }
+    delete newInputs[categoryName]
+    setCategoryBudgetInputs(newInputs)
+
+    // Xóa danh mục khỏi tất cả các tháng trong categoryBudgets
+    const newBudgets = { ...(categoryBudgets || {}) }
+    for (const m of Object.keys(newBudgets)) {
+      if (newBudgets[m] && newBudgets[m][categoryName] !== undefined) {
+        const copy = { ...newBudgets[m] }
+        delete copy[categoryName]
+        newBudgets[m] = copy
+      }
+    }
+    setCategoryBudgets(newBudgets)
+    localStorage.setItem('categoryBudgets', JSON.stringify(newBudgets))
+  }
+
+
+  // Tạo allCategories cho CategoryBudgetInfo
+  const allCategories = [
+    ...CATEGORY_LIST,
+    ...customCategories.map(cat => ({ value: cat, label: cat }))
+  ]
 
   return (
-    <div className={`min-h-screen transition-colors ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100'}`}>
+    <div className={`h-screen overflow-hidden transition-colors ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100'}`}>
       {/* 🔹 Header */}
       <header className={`shadow-lg ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-        <div className='max-w-7xl mx-auto px-6 py-6 flex items-center gap-8'>
-          {/* 🖼️ Logo + Tiêu đề */}
-          
-          <div className='flex items-center gap-6 flex-1'>
-            <img
-              src={logo}
-              alt='Expense Tracker Logo'
-              className='w-10 h-10 rounded-xl object-cover shadow-sm flex-shrink-0'
-            />
-            {/* Month selector box ở góc trái - numeric months */}
-            <div className='flex-1'>
-              <h1 className={`text-3xl font-bold lg:text-4xl mb-1 whitespace-nowrap ${isDark ? 'text-gray-100' : 'text-gray-700'}`}>
-                Quản Lí Chi Tiêu
-              </h1>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>Quản lí thu nhập của bạn một cách dễ dàng</p>
+        <div className='max-w-7xl mx-auto px-4 py-4'>
+          {/* Row 1: Logo + Title + Remaining + Month */}
+          <div className='flex items-center gap-4 mb-3'>
+            {/* Logo + Title */}
+            <div className='flex items-center gap-3 flex-1 min-w-0'>
+              <img
+                src={logo}
+                alt='Expense Tracker Logo'
+                className='w-10 h-10 rounded-xl object-cover shadow-sm flex-shrink-0'
+              />
+              <div className='min-w-0'>
+                <h1 className={`text-2xl lg:text-3xl font-bold truncate ${isDark ? 'text-gray-100' : 'text-gray-700'}`}>
+                  Quản Lí Chi Tiêu
+                </h1>
+                <p className={`text-xs lg:text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Quản lí thu nhập dễ dàng</p>
+              </div>
             </div>
-            <div className='flex flex-col flex-shrink-0'>
-              <label className='text-xs text-gray-400 block'>Tháng</label>
-              <div className='mt-1 flex items-center gap-2'>
+
+            {/* Còn lại + Month selector */}
+            <div className='flex items-center gap-3 flex-shrink-0'>
+              {monthlyLimit > 0 && (
+                <div className={`px-3 py-2 rounded-lg text-center text-xs lg:text-sm flex-shrink-0 ${
+                  monthStats.total <= monthlyLimit
+                    ? isDark ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-700'
+                    : isDark ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-700'
+                }`}>
+                  <p className='text-xs font-semibold opacity-80'>Còn lại</p>
+                  <p className='font-bold whitespace-nowrap'>
+                    {formatVND(Math.max(0, monthlyLimit - monthStats.total))}
+                  </p>
+                </div>
+              )}
+
+              <div className='flex items-center gap-1 flex-shrink-0'>
                 <select
                   value={selectedMonth.split('-')[1]}
                   onChange={(e) => {
@@ -245,29 +401,31 @@ function Dashboard({ isDark, setIsDark }) {
             </div>
           </div>
 
-          {/* 🔘 Nút điều khiển */}
-          <div className='ml-auto flex items-center gap-3 flex-shrink-0'>
+          {/* Row 2: Action buttons */}
+          <div className='flex items-center gap-2 flex-wrap'>
             <Hello token={localStorage.getItem('token')} />
             <Export expenses={expenses} />
             
             <button
               onClick={() => setIsLimitOpen(true)}
-              className='px-4 py-2 bg-amber-500 text-white rounded-xl font-semibold flex items-center gap-2 hover:bg-amber-600 transition-all'
+              className='px-3 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-amber-600 transition-all'
             >
-              <SlidersHorizontal className='w-4 h-4' /> Thiết Lập Định Mức
+              <SlidersHorizontal className='w-3 h-3' />
+              <span className='hidden sm:inline'>Thiết Lập Định Mức</span>
             </button>
 
             <button
               onClick={() => navigate('/reports/monthly')}
-              className='px-4 py-2 bg-indigo-500 text-white rounded-xl font-semibold flex items-center gap-2 hover:bg-indigo-600 transition-all'
+              className='px-3 py-2 bg-indigo-500 text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-indigo-600 transition-all'
             >
-              📊 Báo cáo tháng
+              📊
+              <span className='hidden sm:inline'>Báo cáo tháng</span>
             </button>
 
             {/* Dark Mode Toggle */}
             <button
               onClick={() => setIsDark(!isDark)}
-              className={`px-4 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all ${
+              className={`px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${
                 isDark 
                   ? 'bg-yellow-500 hover:bg-yellow-600 text-gray-900' 
                   : 'bg-gray-700 hover:bg-gray-800 text-white'
@@ -282,37 +440,67 @@ function Dashboard({ isDark, setIsDark }) {
                 setEditingExpense(null)
                 setIsModelOpen(true)
               }}
-              className={`px-4 py-2 text-white rounded-xl font-semibold flex items-center gap-2 transition-all ${
+              className={`px-3 py-2 text-white rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${
                 isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-700 hover:bg-gray-800'
               }`}
             >
-              <Plus className='w-4 h-4' /> Thêm Chi Tiêu
+              <Plus className='w-4 h-4' />
+              <span className='hidden sm:inline'>Thêm Chi Tiêu</span>
             </button>
 
             {/* UserMenu Dropdown */}
-            <UserMenu
-              onOpenProfile={() => setIsProfileOpen(true)}
-              onOpenChangePassword={() => setIsChangePasswordOpen(true)}
-              onOpenEditProfile={() => setIsEditProfileOpen(true)}
-            />
+            <div className='ml-auto'>
+              <UserMenu
+                onOpenProfile={() => setIsProfileOpen(true)}
+                onOpenChangePassword={() => setIsChangePasswordOpen(true)}
+                onOpenEditProfile={() => setIsEditProfileOpen(true)}
+              />
+            </div>
           </div>
         </div>
       </header>
 
-      {/* ⚠️ Alert nếu vượt định mức */}
+      {/* ⚠️ Alert nếu vượt định mức tháng */}
       {showAlert && (
         <div className='max-w-7xl mx-auto mt-6 px-6'>
           <div className={`${isDark ? 'bg-red-900 border-red-700 text-red-200' : 'bg-red-100 border-red-400 text-red-700'} border px-4 py-3 rounded-xl flex items-center gap-2`}>
             <AlertTriangle className='w-5 h-5 text-red-600' />
             <p className='font-semibold'>
-              ⚠️ Cảnh báo: Chi tiêu {formatMonthVN(selectedMonth)} ({formatVND(monthStats.total)}) đã vượt quá định mức ({formatVND(monthlyLimit)})!
+              ⚠️ Cảnh báo: Chi tiêu {formatMonthVN(selectedMonth)} ({formatVND(monthStats.total)}) đã vượt quá định mức ({formatVND(monthStats.total-monthlyLimit)})!
             </p>
           </div>
         </div>
       )}
 
+      {/* ⚠️ Alert cho danh mục vượt định mức */}
+      {categoryWarnings.length > 0 && (
+        <div className='max-w-7xl mx-auto mt-6 px-6 space-y-3'>
+          {categoryWarnings.map((warning, idx) => (
+            <div key={idx} className={`${isDark ? 'bg-orange-900 border-orange-700 text-orange-200' : 'bg-orange-100 border-orange-400 text-orange-700'} border px-4 py-3 rounded-xl flex items-center gap-2`}>
+              <AlertTriangle className='w-5 h-5' />
+              <div className='flex-1'>
+                <p className='font-semibold'>
+                  💰 Danh mục "{warning.category}" đã vượt định mức!
+                </p>
+                <p className='text-sm'>
+                  Định mức: {formatVND(warning.budgetLimit)} | Chi tiêu: {formatVND(warning.newTotal)} | Vượt: {formatVND(warning.exceedAmount)}
+                </p>
+              </div>
+              <button
+                onClick={() => setCategoryWarnings(categoryWarnings.filter((_, i) => i !== idx))}
+                className='text-lg hover:opacity-70'
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 📈 Nội dung chính */}
-      <main className='max-w-7xl mx-auto px-6 py-8'>
+      <main className='max-w-7xl mx-auto px-6 py-6 h-[calc(100vh-160px)] overflow-auto'>
+        
+
         {/* Thống kê */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8'>
           <StatCard
@@ -348,6 +536,13 @@ function Dashboard({ isDark, setIsDark }) {
             iconColor='bg-orange-700'
           />
         </div>
+        {/* Số tiền còn lại từng danh mục */}
+        <CategoryBudgetInfo
+          categoryBudgets={categoryBudgets}
+          selectedMonth={selectedMonth}
+          expenses={expenses}
+          allCategories={allCategories}
+        />
 
         {/* Biểu đồ */}
         <div className='grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8'>
@@ -380,19 +575,65 @@ function Dashboard({ isDark, setIsDark }) {
         }}
         onsubmit={editingExpense ? handleSaveEdit : handleAddExpense}
         initialData={editingExpense}
+        customCategories={customCategories}
+        categoryBudgets={categoryBudgets}
+        selectedMonth={selectedMonth}
+        expenses={expenses}
       />
 
-      {/* Modal Giới hạn */}
+      {/* Modal Giới hạn + Định mức danh mục */}
       {isLimitOpen && (
         <div className='fixed inset-0 bg-black/30 flex items-center justify-center z-50 backdrop-blur-sm'>
-          <div className={`rounded-3xl p-6 w-full max-w-md shadow-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-            <h2 className={`text-2xl font-bold mb-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Giới hạn số tiền trong tháng</h2>
-            <form onSubmit={handleSaveLimit} className='space-y-4'>
+          <div className={`rounded-3xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-auto ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className='flex justify-between items-center mb-6'>
+              <h2 className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                💰 Thiết lập định mức
+              </h2>
+              <button
+                onClick={() => setIsLimitOpen(false)}
+                className='text-2xl hover:opacity-70'
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Alert nếu có lỗi */}
+            <div className={`mb-4 p-4 rounded-lg border-l-4 ${isDark ? 'bg-blue-900 border-blue-500 text-blue-200' : 'bg-blue-50 border-blue-500 text-blue-700'}`}>
+              <p className='text-sm font-semibold'>
+                ℹ️ Tổng định mức danh mục không được vượt quá định mức tháng
+              </p>
+            </div>
+
+            {/* Hiển thị tổng định mức danh mục */}
+            <div className={`mb-4 p-4 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+              <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                📊 Tổng định mức danh mục: {formatVND(Object.values(categoryBudgetInputs || {}).reduce((sum, val) => sum + (val || 0), 0))} / {formatVND(limitInput || 0)}
+              </p>
+              {Object.values(categoryBudgetInputs || {}).reduce((sum, val) => sum + (val || 0), 0) > (limitInput || 0) && limitInput > 0 && (
+                <p className='text-sm text-red-500 font-semibold mt-2'>
+                  ⚠️ Tổng định mức danh mục vượt quá định mức tháng!
+                </p>
+              )}
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleSaveLimit(e)
+                handleSaveCategoryBudgets(e)
+              }}
+              className='space-y-6'
+            >
+              {/* Phần 1: Định mức tháng */}
               <div>
-                <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Giới hạn số tiền tháng này (₫)
-                </label>
-                <input
+                <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                  📅 Định mức tháng {formatMonthVN(selectedMonth)}
+                </h3>
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Giới hạn số tiền (₫)
+                  </label>
+                  <input
                     type='text'
                     name='limit'
                     value={limitInput !== null ? new Intl.NumberFormat('vi-VN').format(limitInput) : ''}
@@ -401,22 +642,124 @@ function Dashboard({ isDark, setIsDark }) {
                       if (raw === '') return setLimitInput(0)
                       setLimitInput(Number(raw))
                     }}
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:border-indigo-500 transition ${
+                    className={`w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:border-indigo-500 transition ${
                       isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200 text-gray-900'
                     }`}
                   />
+                </div>
               </div>
-              <div className='flex gap-3 mt-4'>
+
+              {/* Phần 2: Định mức danh mục */}
+              <div className='border-t pt-6'>
+                <div className='flex justify-between items-center mb-4'>
+                  <h3 className={`text-lg font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                    🏷️ Định mức cho từng danh mục
+                  </h3>
+                </div>
+
+                {/* Phần thêm danh mục mới */}
+                <div className='mb-6 p-4 rounded-lg border-2' style={{borderColor: isDark ? '#4b5563' : '#e5e7eb'}}>
+                  <p className={`text-sm font-semibold mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    ➕ Thêm danh mục mới
+                  </p>
+                  <div className='flex gap-2'>
+                    <input
+                      type='text'
+                      value={newCategoryInput}
+                      onChange={(e) => setNewCategoryInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()}
+                      placeholder='Nhập tên danh mục...'
+                      className={`flex-1 px-3 py-2 border-2 rounded-lg focus:outline-none focus:border-indigo-500 transition ${
+                        isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200 text-gray-900'
+                      }`}
+                    />
+                    <button
+                      type='button'
+                      onClick={handleAddCategory}
+                      className='px-4 py-2 bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-600 transition'
+                    >
+                      Thêm
+                    </button>
+                  </div>
+                </div>
+
+                {/* Danh sách danh mục */}
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  {['Food', 'Transport', 'Shopping', 'Entertaiment', 'Bills', 'Others', ...customCategories].map((category) => {
+                    const totalOtherBudgets = Object.entries(categoryBudgetInputs || {})
+                      .reduce((sum, [cat, val]) => cat !== category ? sum + (val || 0) : sum, 0)
+                    const maxBudgetForCategory = (limitInput || 0) - totalOtherBudgets
+                    
+                    return (
+                      <div key={category}>
+                        <div className='flex justify-between items-start mb-2'>
+                          <label className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                            {category}
+                          </label>
+                          <button
+                            type='button'
+                            onClick={() => handleDeleteCategory(category)}
+                            className='text-red-500 hover:text-red-700 font-bold text-lg'
+                            title='Xóa danh mục'
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <input
+                          type='text'
+                          value={
+                            categoryBudgetInputs[category]
+                              ? new Intl.NumberFormat('vi-VN').format(categoryBudgetInputs[category])
+                              : '0'
+                          }
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\./g, '').replace(/[^0-9]/g, '')
+                            const newValue = raw === '' ? 0 : Number(raw)
+                            
+                            // Kiểm tra không vượt quá định mức tháng
+                            const totalOther = Object.entries(categoryBudgetInputs || {})
+                              .reduce((sum, [cat, val]) => cat !== category ? sum + (val || 0) : sum, 0)
+                            
+                            if (newValue + totalOther <= (limitInput || 0) || limitInput === 0) {
+                              setCategoryBudgetInputs({
+                                ...categoryBudgetInputs,
+                                [category]: newValue,
+                              })
+                            }
+                          }}
+                          placeholder='0'
+                          className={`w-full px-4 py-2 border-2 rounded-lg focus:outline-none focus:border-indigo-500 transition ${
+                            isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-50 border-gray-200 text-gray-900'
+                          }`}
+                        />
+                        <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {categoryBudgetInputs[category]
+                            ? formatVND(categoryBudgetInputs[category])
+                            : 'Không giới hạn'} 
+                          {limitInput > 0 && ` (Tối đa: ${formatVND(maxBudgetForCategory)})`}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className='flex gap-3 mt-6 pt-4 border-t'>
                 <button
                   type='submit'
-                  className='flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition'
+                  disabled={Object.values(categoryBudgetInputs || {}).reduce((sum, val) => sum + (val || 0), 0) > (limitInput || 0) && limitInput > 0}
+                  className='flex-1 bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed'
                 >
-                  Lưu
+                  💾 Lưu định mức
                 </button>
                 <button
                   type='button'
                   onClick={() => setIsLimitOpen(false)}
-                  className='px-4 py-3 rounded-xl border font-semibold hover:bg-gray-100'
+                  className={`px-6 py-3 rounded-lg font-semibold border-2 transition ${
+                    isDark
+                      ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                  }`}
                 >
                   Hủy
                 </button>
