@@ -24,7 +24,7 @@ import ChangePassword from '../components/ChangePassword'
 import EditProfile from '../components/EditProfile'
 import { fetchData, createData, deleteData, updateData } from '../api'
 import CategoryBudgetInfo from '../components/CategoryBudgetInfo'
-import { categories as CATEGORY_LIST } from '../utils/categoryLabels'
+import { categories as CATEGORY_LIST, formatVNDSmart } from '../utils/categoryLabels'
 
 // 🖼️ Thêm logo
 import logo from '../assets/favicon.png'
@@ -359,7 +359,7 @@ function Dashboard({ isDark, setIsDark }) {
                 }`}>
                   <p className='text-xs font-semibold opacity-80'>Còn lại</p>
                   <p className='font-bold whitespace-nowrap'>
-                    {formatVND(Math.max(0, monthlyLimit - monthStats.total))}
+                    {formatVNDSmart(Math.max(0, monthlyLimit - monthStats.total))}
                   </p>
                 </div>
               )}
@@ -466,7 +466,7 @@ function Dashboard({ isDark, setIsDark }) {
           <div className={`${isDark ? 'bg-red-900 border-red-700 text-red-200' : 'bg-red-100 border-red-400 text-red-700'} border px-4 py-3 rounded-xl flex items-center gap-2`}>
             <AlertTriangle className='w-5 h-5 text-red-600' />
             <p className='font-semibold'>
-              ⚠️ Cảnh báo: Chi tiêu {formatMonthVN(selectedMonth)} ({formatVND(monthStats.total)}) đã vượt quá định mức ({formatVND(monthStats.total-monthlyLimit)})!
+              ⚠️ Cảnh báo: Chi tiêu {formatMonthVN(selectedMonth)} ({formatVNDSmart(monthStats.total)}) đã vượt quá định mức ({formatVNDSmart(monthStats.total-monthlyLimit)})!
             </p>
           </div>
         </div>
@@ -483,7 +483,7 @@ function Dashboard({ isDark, setIsDark }) {
                   💰 Danh mục "{warning.category}" đã vượt định mức!
                 </p>
                 <p className='text-sm'>
-                  Định mức: {formatVND(warning.budgetLimit)} | Chi tiêu: {formatVND(warning.newTotal)} | Vượt: {formatVND(warning.exceedAmount)}
+                  Định mức: {formatVNDSmart(warning.budgetLimit)} | Chi tiêu: {formatVNDSmart(warning.newTotal)} | Vượt: {formatVNDSmart(warning.exceedAmount)}
                 </p>
               </div>
               <button
@@ -504,10 +504,10 @@ function Dashboard({ isDark, setIsDark }) {
         {/* Thống kê */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8'>
           <StatCard
-            value={formatVND(monthStats.total)}
+            value={formatVNDSmart(monthStats.total)}
             title={`Tổng Chi tiêu (${formatMonthVN(selectedMonth)})`}
             icon={Wallet}
-            subtitle={`Giới hạn chi tiêu: ${formatVND(monthlyLimit)}`}
+            subtitle={`Giới hạn chi tiêu: ${formatVNDSmart(monthlyLimit)}`}
             bgColor='bg-gradient-to-br from-indigo-500 to-indigo-600'
             iconColor='bg-indigo-700'
           />
@@ -520,7 +520,7 @@ function Dashboard({ isDark, setIsDark }) {
             iconColor='bg-purple-700'
           />
           <StatCard
-            value={formatVND(monthStats.avg)}
+            value={formatVNDSmart(monthStats.avg)}
             title='Trung Bình'
             icon={TrendingUp}
             subtitle='Mỗi giao dịch'
@@ -528,7 +528,7 @@ function Dashboard({ isDark, setIsDark }) {
             iconColor='bg-pink-700'
           />
           <StatCard
-            value={formatVND(monthStats.highest)}
+            value={formatVNDSmart(monthStats.highest)}
             title='Cao nhất'
             icon={DollarSign}
             subtitle='Giao dịch cao nhất'
@@ -606,8 +606,8 @@ function Dashboard({ isDark, setIsDark }) {
 
             {/* Hiển thị tổng định mức danh mục */}
             <div className={`mb-4 p-4 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                📊 Tổng định mức danh mục: {formatVND(Object.values(categoryBudgetInputs || {}).reduce((sum, val) => sum + (val || 0), 0))} / {formatVND(limitInput || 0)}
+                <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                📊 Tổng định mức danh mục: {formatVNDSmart(Object.values(categoryBudgetInputs || {}).reduce((sum, val) => sum + (val || 0), 0))} / {formatVNDSmart(limitInput || 0)}
               </p>
               {Object.values(categoryBudgetInputs || {}).reduce((sum, val) => sum + (val || 0), 0) > (limitInput || 0) && limitInput > 0 && (
                 <p className='text-sm text-red-500 font-semibold mt-2'>
@@ -734,9 +734,9 @@ function Dashboard({ isDark, setIsDark }) {
                         />
                         <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                           {categoryBudgetInputs[category]
-                            ? formatVND(categoryBudgetInputs[category])
+                            ? formatVNDSmart(categoryBudgetInputs[category])
                             : 'Không giới hạn'} 
-                          {limitInput > 0 && ` (Tối đa: ${formatVND(maxBudgetForCategory)})`}
+                          {limitInput > 0 && ` (Tối đa: ${formatVNDSmart(maxBudgetForCategory)})`}
                         </p>
                       </div>
                     )

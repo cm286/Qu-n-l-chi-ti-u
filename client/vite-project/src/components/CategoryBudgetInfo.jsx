@@ -1,4 +1,5 @@
 import React from 'react'
+import { formatVNDSmart } from '../utils/categoryLabels'
 
 function CategoryBudgetInfo({ categoryBudgets = {}, selectedMonth = '', expenses = [], allCategories = [] }) {
   // Tính số tiền còn lại cho mỗi danh mục
@@ -22,7 +23,7 @@ function CategoryBudgetInfo({ categoryBudgets = {}, selectedMonth = '', expenses
           return (
             <div key={cat.value} className="bg-gray-50 border rounded-xl p-3 flex flex-col items-center">
               <span className="font-semibold text-gray-700 text-sm">{cat.label}</span>
-              <span className={`text-xs mt-1 font-bold ${remaining > 0 ? 'text-green-600' : 'text-red-600'}`}>Còn lại: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Math.max(remaining, 0))}</span>
+              <span className={`text-xs mt-1 font-bold ${remaining > 0 ? 'text-green-600' : 'text-red-600'}`}>Còn lại: {formatVNDSmart(Math.max(remaining, 0))}</span>
             </div>
           )
         })}

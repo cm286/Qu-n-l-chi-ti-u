@@ -25,6 +25,18 @@ exports.createExpense = async (req, res) => {
       return res.status(401).json({ success: false, message: "User not authenticated" });
     }
 
+    // ⏰ Kiểm tra ngày chi tiêu không được cũ hơn 1 tháng
+    const expenseDate = req.body.date ? new Date(req.body.date) : new Date();
+    const today = new Date();
+    const oneMonthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+    
+    if (expenseDate < oneMonthAgo) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Chi tiêu chỉ có thể thêm trong vòng 1 tháng trở lại. Ngày chi tiêu không được cũ hơn 30 ngày." 
+      });
+    }
+
     // ✅ Gộp dữ liệu body + userId
     const payload = {
       description: req.body.description,
@@ -54,6 +66,20 @@ exports.createExpense = async (req, res) => {
 // ✏️ Cập nhật chi tiêu
 exports.updateExpense = async (req, res) => {
   try {
+    // ⏰ Kiểm tra ngày chi tiêu không được cũ hơn 1 tháng (nếu có cập nhật ngày)
+    if (req.body.date) {
+      const expenseDate = new Date(req.body.date);
+      const today = new Date();
+      const oneMonthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+      
+      if (expenseDate < oneMonthAgo) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Chi tiêu chỉ có thể cập nhật trong vòng 1 tháng trở lại. Ngày chi tiêu không được cũ hơn 30 ngày." 
+        });
+      }
+    }
+
     const updatedExpense = await Expense.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -69,7 +95,6 @@ exports.updateExpense = async (req, res) => {
       });
     }
 
-    // ⚠️ Lỗi: dòng này bị đặt sai chỗ trong code gốc, nên không bao giờ chạy
     res.json({ success: true, data: updatedExpense });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

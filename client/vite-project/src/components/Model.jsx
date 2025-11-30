@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
-import { categories as CATEGORY_LIST } from '../utils/categoryLabels'
+import { categories as CATEGORY_LIST, formatVNDSmart } from '../utils/categoryLabels'
 
 
 function Model({ isOpen, onsubmit, initialData, onclose, customCategories = [], categoryBudgets = {}, selectedMonth = '', expenses = [] }) {
@@ -35,7 +35,23 @@ function Model({ isOpen, onsubmit, initialData, onclose, customCategories = [], 
       alert('Please fill in required fields')
       return
     }
+
     const numericAmount = parseFloat(formData.amount.toString().replace(/\./g, ''))
+
+    if (numericAmount <= 0) {
+      alert('⚠️ Số tiền phải lớn hơn 0')
+      return
+    }
+
+    // ⏰ Kiểm tra ngày chi tiêu không được cũ hơn 1 tháng
+    const selectedDate = new Date(formData.date)
+    const today = new Date()
+    const oneMonthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate())
+    
+    if (selectedDate < oneMonthAgo) {
+      alert('⚠️ Chi tiêu chỉ có thể thêm trong vòng 1 tháng trở lại. Ngày chi tiêu không được cũ hơn 30 ngày.')
+      return
+    }
 
     // Check category budget for the selected month
     const monthBudgets = categoryBudgets[selectedMonth] || {}
@@ -48,7 +64,7 @@ function Model({ isOpen, onsubmit, initialData, onclose, customCategories = [], 
 
       const newTotal = existingTotal + numericAmount
       if (newTotal > budgetForCategory && !forceSubmit) {
-        const warningMsg = `Bạn sẽ vượt định mức danh mục "${formData.category}" cho ${new Intl.DateTimeFormat('vi-VN', { month: '2-digit', year: 'numeric' }).format(new Date(selectedMonth + '-01'))}. Định mức: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(budgetForCategory)}, Tổng sau khi thêm: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(newTotal)}.`
+        const warningMsg = `Bạn sẽ vượt định mức danh mục "${formData.category}" cho ${new Intl.DateTimeFormat('vi-VN', { month: '2-digit', year: 'numeric' }).format(new Date(selectedMonth + '-01'))}. Định mức: ${formatVNDSmart(budgetForCategory)}, Tổng sau khi thêm: ${formatVNDSmart(newTotal)}.`
         setWarning(warningMsg)
         setForceSubmit(true)
         return
@@ -157,6 +173,8 @@ function Model({ isOpen, onsubmit, initialData, onclose, customCategories = [], 
                 onChange={(e) =>
                   setFormData({ ...formData, date: e.target.value })
                 }
+                max={new Date().toISOString().split('T')[0]}
+                min={new Date(new Date().getFullYear(), new Date().getMonth() - 1, new Date().getDate()).toISOString().split('T')[0]}
                 className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 
                 rounded-xl focus:outline-none focus:border-indigo-500"
               />
@@ -186,7 +204,7 @@ function Model({ isOpen, onsubmit, initialData, onclose, customCategories = [], 
                     </button>
                     {remaining !== null && (
                       <span className="text-[10px] text-gray-500 mt-1">
-                        Còn lại: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Math.max(remaining, 0))}
+                        Còn lại: {formatVNDSmart(Math.max(remaining, 0))}
                       </span>
                     )}
                   </div>
