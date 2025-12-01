@@ -22,7 +22,7 @@ exports.register = async (req, res) => {
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      return res.status(400).json({ success: false, message: 'Email already registered' });
+      return res.status(400).json({ success: false, message: 'Email đã tồn tại' });
     }
 
     const user = await User.create({ name, email, password });

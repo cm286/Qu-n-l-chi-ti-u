@@ -24,7 +24,7 @@ import ChangePassword from '../components/ChangePassword'
 import EditProfile from '../components/EditProfile'
 import { fetchData, createData, deleteData, updateData } from '../api'
 import CategoryBudgetInfo from '../components/CategoryBudgetInfo'
-import { categories as CATEGORY_LIST, formatVNDSmart } from '../utils/categoryLabels'
+import { categories as CATEGORY_LIST, formatVNDSmart, toVN } from '../utils/categoryLabels'
 
 // 🖼️ Thêm logo
 import logo from '../assets/favicon.png'
@@ -694,7 +694,7 @@ function Dashboard({ isDark, setIsDark }) {
                       <div key={category}>
                         <div className='flex justify-between items-start mb-2'>
                           <label className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                            {category}
+                            {toVN(category)}
                           </label>
                           <button
                             type='button'
@@ -733,9 +733,7 @@ function Dashboard({ isDark, setIsDark }) {
                           }`}
                         />
                         <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {categoryBudgetInputs[category]
-                            ? formatVNDSmart(categoryBudgetInputs[category])
-                            : 'Không giới hạn'} 
+                          {formatVNDSmart(categoryBudgetInputs[category] || 0)}
                           {limitInput > 0 && ` (Tối đa: ${formatVNDSmart(maxBudgetForCategory)})`}
                         </p>
                       </div>

@@ -2,14 +2,22 @@ import React from "react";
 import { toVN } from '../utils/categoryLabels'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
-const COLORS = ["#6366F1", "#22C55E", "#EAB308", "#F43F5E"];
+// 🎨 Cố định màu cho từng danh mục
+const CATEGORY_COLORS = {
+  'Food': '#10b981',        // Green - Ăn uống
+  'Transport': '#3b82f6',   // Blue - Đi lại
+  'Shopping': '#ec4899',    // Pink - Mua sắm
+  'Entertaiment': '#8b5cf6', // Purple - Giải trí
+  'Bills': '#ef4444',       // Red - Hóa đơn
+  'Others': '#6b7280',      // Gray - Khác
+}
 
 function CategoryChart({ categoryTotal }) {
-  // ✅ Sửa tên key từ "colour" → "color" (thống nhất với cách dùng)
-  const data = Object.entries(categoryTotal || {}).map(([name, value], index) => ({
+  // ✅ Gán màu cố định dựa trên tên danh mục
+  const data = Object.entries(categoryTotal || {}).map(([name, value]) => ({
     name: toVN(name),
     value,
-    color: COLORS[index % COLORS.length],
+    color: CATEGORY_COLORS[name] || '#9ca3af', // Default gray nếu không tìm thấy
   }));
 
   return (  
