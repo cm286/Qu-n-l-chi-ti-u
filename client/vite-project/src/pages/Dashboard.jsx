@@ -22,7 +22,7 @@ import UserMenu from '../components/UserMenu'
 import UserProfile from '../components/UserProfile'
 import ChangePassword from '../components/ChangePassword'
 import EditProfile from '../components/EditProfile'
-import { fetchData, createData, deleteData, updateData } from '../api'
+import { fetchData, createData, deleteData, updateData, getBudgetData, saveBudgetData } from '../api'
 import CategoryBudgetInfo from '../components/CategoryBudgetInfo'
 import { categories as CATEGORY_LIST, formatVNDSmart, toVN } from '../utils/categoryLabels'
 
@@ -183,7 +183,32 @@ function Dashboard({ isDark, setIsDark }) {
         console.error('Error loading expenses:', error)
       }
     }
+
+    const loadBudgetData = async () => {
+      try {
+        const budgetData = await getBudgetData()
+        if (budgetData) {
+          // Load từ server thay vì localStorage
+          if (budgetData.monthlyLimits) {
+            setMonthlyLimits(budgetData.monthlyLimits)
+            localStorage.setItem('monthlyLimits', JSON.stringify(budgetData.monthlyLimits))
+          }
+          if (budgetData.monthlyBudgets) {
+            setCategoryBudgets(budgetData.monthlyBudgets)
+            localStorage.setItem('categoryBudgets', JSON.stringify(budgetData.monthlyBudgets))
+          }
+          if (budgetData.customCategories) {
+            setCustomCategories(budgetData.customCategories)
+            localStorage.setItem('customCategories', JSON.stringify(budgetData.customCategories))
+          }
+        }
+      } catch (error) {
+        console.error('Error loading budget data:', error)
+      }
+    }
+
     loadExpenses()
+    loadBudgetData()
   }, [])
 
   // ⚠️ Cảnh báo vượt định mức (so sánh theo tháng đang chọn)
@@ -236,7 +261,7 @@ function Dashboard({ isDark, setIsDark }) {
   }
 
   // 💰 Lưu định mức cho tháng đang chọn
-  const handleSaveLimit = (e) => {
+  const handleSaveLimit = async (e) => {
     e.preventDefault()
     // Lấy giá trị từ input, loại bỏ dấu phân ngăn
     const rawValue = e.target.limit.value.replace(/\./g, '').trim()
@@ -250,20 +275,46 @@ function Dashboard({ isDark, setIsDark }) {
     const updated = { ...monthlyLimits, [selectedMonth]: newLimit }
     setMonthlyLimits(updated)
     localStorage.setItem('monthlyLimits', JSON.stringify(updated))
+
+    // Lưu lên server
+    try {
+      await saveBudgetData({
+        monthlyLimits: updated,
+        monthlyBudgets: categoryBudgets,
+        customCategories: customCategories
+      })
+    } catch (error) {
+      console.error('Error saving budget data:', error)
+      alert('Lỗi khi lưu định mức. Vui lòng thử lại.')
+    }
   }
 
   // 💰 Lưu định mức danh mục cho tháng đang chọn
-  const handleSaveCategoryBudgets = (e) => {
+  const handleSaveCategoryBudgets = async (e) => {
     e.preventDefault()
     const updated = { ...(categoryBudgets || {}) }
     updated[selectedMonth] = { ...(categoryBudgetInputs || {}) }
     setCategoryBudgets(updated)
     localStorage.setItem('categoryBudgets', JSON.stringify(updated))
+    
+    // Lưu lên server
+    try {
+      await saveBudgetData({
+        monthlyLimits: monthlyLimits,
+        monthlyBudgets: updated,
+        customCategories: customCategories
+      })
+    } catch (error) {
+      console.error('Error saving category budgets:', error)
+      alert('Lỗi khi lưu định mức. Vui lòng thử lại.')
+      return
+    }
+    
     setIsLimitOpen(false)
   }
 
   // ➕ Thêm danh mục mới
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (!newCategoryInput.trim()) {
       alert('⚠️ Vui lòng nhập tên danh mục')
       return
@@ -289,17 +340,29 @@ function Dashboard({ isDark, setIsDark }) {
     })
     
     setNewCategoryInput('')
+
+    // Lưu lên server
+    try {
+      await saveBudgetData({
+        monthlyLimits: monthlyLimits,
+        monthlyBudgets: categoryBudgets,
+        customCategories: updated
+      })
+    } catch (error) {
+      console.error('Error saving custom category:', error)
+    }
   }
 
   // 🗑️ Xóa danh mục (bất kỳ danh mục nào)
-  const handleDeleteCategory = (categoryName) => {
+  const handleDeleteCategory = async (categoryName) => {
     if (!window.confirm(`Xóa danh mục "${categoryName}"?`)) return
     
+    let updatedCustom = customCategories
     // Nếu là danh mục custom, xóa khỏi customCategories
     if (customCategories.includes(categoryName)) {
-      const updated = customCategories.filter(cat => cat !== categoryName)
-      setCustomCategories(updated)
-      localStorage.setItem('customCategories', JSON.stringify(updated))
+      updatedCustom = customCategories.filter(cat => cat !== categoryName)
+      setCustomCategories(updatedCustom)
+      localStorage.setItem('customCategories', JSON.stringify(updatedCustom))
     }
 
     // Xóa khỏi categoryBudgetInputs (tháng hiện tại)
@@ -318,6 +381,17 @@ function Dashboard({ isDark, setIsDark }) {
     }
     setCategoryBudgets(newBudgets)
     localStorage.setItem('categoryBudgets', JSON.stringify(newBudgets))
+
+    // Lưu lên server
+    try {
+      await saveBudgetData({
+        monthlyLimits: monthlyLimits,
+        monthlyBudgets: newBudgets,
+        customCategories: updatedCustom
+      })
+    } catch (error) {
+      console.error('Error deleting category:', error)
+    }
   }
 
 

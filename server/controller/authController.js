@@ -240,3 +240,68 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// 💰 Lấy tất cả budget data (định mức tháng + danh mục)
+exports.getBudgetData = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Convert Maps to objects for JSON response
+    const monthlyLimits = user.monthlyLimits ? Object.fromEntries(user.monthlyLimits) : {};
+    const monthlyBudgets = user.monthlyBudgets ? Object.fromEntries(user.monthlyBudgets) : {};
+    const customCategories = user.customCategories || [];
+
+    res.json({
+      success: true,
+      data: {
+        monthlyLimits,
+        monthlyBudgets,
+        customCategories
+      }
+    });
+  } catch (error) {
+    console.error('Get budget data error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 💾 Lưu tất cả budget data
+exports.saveBudgetData = async (req, res) => {
+  try {
+    const { monthlyLimits, monthlyBudgets, customCategories } = req.body;
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Convert objects to Maps
+    if (monthlyLimits) {
+      user.monthlyLimits = new Map(Object.entries(monthlyLimits));
+    }
+    if (monthlyBudgets) {
+      user.monthlyBudgets = new Map(Object.entries(monthlyBudgets));
+    }
+    if (customCategories) {
+      user.customCategories = customCategories;
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Budget data saved successfully',
+      data: {
+        monthlyLimits: Object.fromEntries(user.monthlyLimits),
+        monthlyBudgets: Object.fromEntries(user.monthlyBudgets),
+        customCategories: user.customCategories
+      }
+    });
+  } catch (error) {
+    console.error('Save budget data error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

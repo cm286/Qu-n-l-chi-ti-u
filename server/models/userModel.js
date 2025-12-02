@@ -40,6 +40,23 @@
         ['Bills', 0],
         ['Others', 0]
       ])
+    },
+    // 📅 Định mức hàng tháng: { 'YYYY-MM': amount }
+    monthlyLimits: {
+      type: Map,
+      of: Number,
+      default: new Map()
+    },
+    // 📦 Định mức danh mục theo tháng: { 'YYYY-MM': { category: amount } }
+    monthlyBudgets: {
+      type: Map,
+      of: mongoose.Schema.Types.Mixed,
+      default: new Map()
+    },
+    // 🏷️ Danh mục tùy chỉnh
+    customCategories: {
+      type: [String],
+      default: []
     }
   }, { timestamps: true });
 

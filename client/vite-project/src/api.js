@@ -113,3 +113,29 @@ export const getMonthlyReport = async (month, year, monthlyLimit = null) => {
     throw error;
   }
 };
+
+// 💰 Lấy dữ liệu budget (định mức tháng, danh mục, custom categories)
+export const getBudgetData = async () => {
+  try {
+    const res = await axios.get('http://localhost:8000/api/v2/auth/budget-data', getAuthHeader());
+    return res.data.data;
+  } catch (error) {
+    console.error('❌ Get budget data failed:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// 💾 Lưu dữ liệu budget
+export const saveBudgetData = async (budgetData) => {
+  try {
+    const res = await axios.put(
+      'http://localhost:8000/api/v2/auth/budget-data',
+      budgetData,
+      getAuthHeader()
+    );
+    return res.data.data;
+  } catch (error) {
+    console.error('❌ Save budget data failed:', error.response?.data || error.message);
+    throw error;
+  }
+};
