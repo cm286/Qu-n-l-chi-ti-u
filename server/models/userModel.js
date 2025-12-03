@@ -4,17 +4,19 @@
   const userSchema = new mongoose.Schema({
     name: {
       type: String,
-      required: [true, 'Please enter your name']
+      required: [true, 'Vui lòng nhập tên của bạn'],
+      trim: true,
+      maxlength: [50, 'Tên không được quá 50 ký tự']
     },
     email: {
       type: String,
-      required: [true, 'Please enter your email'],
+      required: [true, 'Vui lòng nhập email của bạn'],
       unique: true,
       lowercase: true
     },
     password: {
       type: String,
-      required: [true, 'Please enter your password'],
+      required: [true, 'Vui lòng nhập mật khẩu'],
       minlength: 6,
       select: false
     },

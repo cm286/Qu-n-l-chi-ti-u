@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { saveBudgetData } from '../api'
 import { User, Lock, LogOut, ChevronDown } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -27,12 +28,28 @@ export default function UserMenu({ onOpenProfile, onOpenChangePassword, onOpenEd
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleLogout = () => {
-    if (window.confirm('Bạn có chắc muốn đăng xuất không?')) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      navigate('/login', { replace: true })
+  const handleLogout = async () => {
+    if (!window.confirm('Bạn có chắc muốn đăng xuất không?')) return
+
+    // Try to persist any budget data stored in localStorage to server before logout
+    try {
+      const monthlyLimits = JSON.parse(localStorage.getItem('monthlyLimits') || '{}')
+      const monthlyBudgets = JSON.parse(localStorage.getItem('categoryBudgets') || '{}')
+      const customCategories = JSON.parse(localStorage.getItem('customCategories') || '[]')
+
+      await saveBudgetData({
+        monthlyLimits,
+        monthlyBudgets,
+        customCategories,
+      })
+    } catch (err) {
+      console.error('Error saving budget data during logout:', err)
+      // proceed with logout even if save fails
     }
+
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    navigate('/login', { replace: true })
   }
 
   const handleProfileClick = () => {

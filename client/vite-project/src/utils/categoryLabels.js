@@ -46,10 +46,13 @@ export const formatVNDSmart = (amount) => {
 
   // Nếu >= 10 triệu: rút gọn sang triệu/tỷ (không thêm ký hiệu đồng)
   if (num >= billion) {
-    const value = (num / billion).toFixed(1).replace(/\.0$/, '')
+    // Truncate to 2 decimal places (không làm tròn) để các khoản nhỏ làm giảm hiển thị
+    const raw = Math.floor((num / billion) * 100) / 100
+    const value = raw.toFixed(2).replace(/\.0+$/, '').replace(/\.(\d)0$/, '.$1')
     return `${value} tỷ`
   } else if (num >= million) {
-    const value = (num / million).toFixed(1).replace(/\.0$/, '')
+    const raw = Math.floor((num / million) * 100) / 100
+    const value = raw.toFixed(2).replace(/\.0+$/, '').replace(/\.(\d)0$/, '.$1')
     return `${value} triệu`
   }
 

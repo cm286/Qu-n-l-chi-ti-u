@@ -32,7 +32,7 @@ function Model({ isOpen, onsubmit, initialData, onclose, customCategories = [], 
 
   const handleSubmit = () => {
     if (!formData.description || !formData.amount) {
-      alert('Please fill in required fields')
+      alert('Vui lòng điền đầy đủ mô tả và số tiền')
       return
     }
 

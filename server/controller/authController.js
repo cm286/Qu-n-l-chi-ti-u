@@ -46,7 +46,7 @@ exports.login = async (req, res) => {
 
     const user = await User.findOne({ email }).select('+password');
     if (!user || !(await user.matchPassword(password))) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+      return res.status(401).json({ success: false, message: 'Bạn đã nhập sai email hoặc mật khẩu' });
     }
 
     const token = generateToken(user._id);
@@ -146,7 +146,7 @@ exports.changePassword = async (req, res) => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Please provide current password, new password and confirm password' 
+        message: 'Vui lòng điền đầy đủ các trường bắt buộc' 
       });
     }
 

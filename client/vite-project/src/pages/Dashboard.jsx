@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import {
   DollarSign,
   Plus,
@@ -78,6 +78,8 @@ function Dashboard({ isDark, setIsDark }) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
   }
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey())
+  const initialBudgetLoaded = useRef(false)
+  const [showExactRemaining, setShowExactRemaining] = useState(false)
 
   // Derived limit for the selected month
   const monthlyLimit = Number(monthlyLimits[selectedMonth] ?? 1000)
@@ -135,6 +137,25 @@ function Dashboard({ isDark, setIsDark }) {
     setCategoryWarnings(warnings)
   }, [expenses, categoryBudgets, selectedMonth, customCategories])
 
+  // 🔁 Auto-save budget data (debounced) whenever budgets/custom categories change
+  useEffect(() => {
+    // don't autosave until initial load from server finishes
+    if (!localStorage.getItem('token') || !initialBudgetLoaded.current) return
+
+    const timer = setTimeout(async () => {
+      try {
+        await saveBudgetData({
+          monthlyLimits: monthlyLimits,
+          monthlyBudgets: categoryBudgets,
+          customCategories: customCategories,
+        })
+      } catch (err) {
+        console.error('Auto-save budget data failed:', err)
+      }
+    }, 800)
+
+    return () => clearTimeout(timer)
+  }, [monthlyLimits, categoryBudgets, customCategories])
   const formatMonthVN = (ym) => {
     try {
       const d = new Date(`${ym}-01`)
@@ -201,6 +222,8 @@ function Dashboard({ isDark, setIsDark }) {
             setCustomCategories(budgetData.customCategories)
             localStorage.setItem('customCategories', JSON.stringify(budgetData.customCategories))
           }
+          // mark that initial budget was loaded from server
+          initialBudgetLoaded.current = true
         }
       } catch (error) {
         console.error('Error loading budget data:', error)
@@ -432,8 +455,14 @@ function Dashboard({ isDark, setIsDark }) {
                     : isDark ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-700'
                 }`}>
                   <p className='text-xs font-semibold opacity-80'>Còn lại</p>
-                  <p className='font-bold whitespace-nowrap'>
-                    {formatVNDSmart(Math.max(0, monthlyLimit - monthStats.total))}
+                  <p
+                    className='font-bold whitespace-nowrap cursor-pointer select-none'
+                    title={showExactRemaining ? 'Bấm để xem rút gọn' : 'Bấm để xem chính xác'}
+                    onClick={() => setShowExactRemaining((s) => !s)}
+                  >
+                    {showExactRemaining
+                      ? formatVND(Math.max(0, monthlyLimit - monthStats.total))
+                      : formatVNDSmart(Math.max(0, monthlyLimit - monthStats.total))}
                   </p>
                 </div>
               )}
