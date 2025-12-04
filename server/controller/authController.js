@@ -154,7 +154,7 @@ exports.changePassword = async (req, res) => {
     if (newPassword !== confirmPassword) {
       return res.status(400).json({ 
         success: false, 
-        message: 'New passwords do not match' 
+        message: 'Mật khẩu mới và xác nhận mật khẩu không khớp' 
       });
     }
 
@@ -162,7 +162,7 @@ exports.changePassword = async (req, res) => {
     if (newPassword.length < 6) {
       return res.status(400).json({ 
         success: false, 
-        message: 'New password must be at least 6 characters' 
+        message: 'Mật khẩu mới phải có ít nhất 6 ký tự' 
       });
     }
 
@@ -174,7 +174,7 @@ exports.changePassword = async (req, res) => {
     if (!isPasswordCorrect) {
       return res.status(401).json({ 
         success: false, 
-        message: 'Current password is incorrect' 
+        message: 'Mật khẩu hiện tại không đúng' 
       });
     }
 
@@ -184,7 +184,7 @@ exports.changePassword = async (req, res) => {
 
     res.json({ 
       success: true, 
-      message: 'Password changed successfully' 
+      message: 'Mật khẩu đã được thay đổi thành công' 
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -200,7 +200,7 @@ exports.updateProfile = async (req, res) => {
     if (name && name.trim().length === 0) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Name cannot be empty' 
+        message: 'Tên không được để trống' 
       });
     }
 
@@ -227,7 +227,7 @@ exports.updateProfile = async (req, res) => {
 
     res.json({ 
       success: true, 
-      message: 'Profile updated successfully',
+      message: 'Profile đã được cập nhật thành công',
       user: {
         id: user._id,
         name: user.name,
@@ -246,7 +246,7 @@ exports.getBudgetData = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
     }
 
     // Convert Maps to objects for JSON response

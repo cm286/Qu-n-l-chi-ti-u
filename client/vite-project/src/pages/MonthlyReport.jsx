@@ -59,22 +59,23 @@ export default function MonthlyReport() {
         monthlyCounts[m] += 1
       })
 
-      // Read per-month limits from localStorage (key: monthlyLimits JSON) or fallback to monthlyLimit
+      // Read per-month limits from localStorage (key: monthlyLimits JSON)
+      // If a month does not have a defined monthly limit, keep it as `null` (meaning "not set")
       let monthlyLimits = {}
       try {
         monthlyLimits = JSON.parse(localStorage.getItem('monthlyLimits')) || {}
       } catch (e) {
         monthlyLimits = {}
       }
-      const defaultLimit = Number(localStorage.getItem('monthlyLimit')) || 0
 
       const rows = monthlyTotals.map((spent, idx) => {
         const m = idx + 1
         const key = `${year}-${String(m).padStart(2, '0')}`
-        const limit = Number(monthlyLimits[key] ?? defaultLimit)
-        const diff = limit - spent // positive = remaining, negative = exceeded
+        const limit = monthlyLimits.hasOwnProperty(key) ? Number(monthlyLimits[key]) : null
+        const diff = limit !== null ? limit - spent : null // null = no limit set
+        const saved = limit !== null ? Math.max(0, limit - spent) : null
         const count = monthlyCounts[idx]
-        return { month: m, spent, limit, diff, count }
+        return { month: m, spent, limit, diff, count, saved }
       })
 
       setYearlySummary(rows)
@@ -167,30 +168,66 @@ export default function MonthlyReport() {
         <div className='max-h-96 overflow-auto'>
           <table className='w-full text-left'>
             <thead>
-              <tr className='text-sm text-gray-500 border-b'>
-                <th className='py-2 w-1/3'>Tháng</th>
-                <th className='py-2'>Số tiền</th>
+              <tr className='text-sm text-gray-500 border-b bg-gray-50'>
+                <th className='py-2 px-2'>Tháng</th>
+                <th className='py-2 px-2 text-right'>Số Tiền Đã Chi</th>
+                <th className='py-2 px-2 text-right'>Định Mức Tháng</th>
+                <th className='py-2 px-2 text-right'>Tiết Kiệm</th>
+                <th className='py-2 px-2 text-right'>Vượt Quá Định Mức</th>
+                <th className='py-2 px-2 text-right'>Trạng Thái</th>
               </tr>
             </thead>
             <tbody>
-                  {yearlySummary.map((r) => (
-                    <tr key={r.month} className='border-b'>
-                      <td className='py-2'>Tháng {r.month}</td>
-                      <td className='py-2'>
-                        {r.count === 0 ? (
-                          <span className='text-gray-400'>-</span>
-                        ) : r.diff < 0 ? (
-                          <span className='text-red-600'>-{formatVND(Math.abs(r.diff))}</span>
-                        ) : (
-                          <span className='text-green-600'>+{formatVND(r.diff)}</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  <tr className='font-bold'>
-                    <td className='py-2'>Tổng năm</td>
-                    <td className='py-2'>
-                      {formatVND(yearlySummary.reduce((s, r) => s + (r.count > 0 ? (r.diff || 0) : 0), 0))}
+                  {yearlySummary.map((r) => {
+                    const exceeded = r.limit !== null ? Math.max(0, r.spent - r.limit) : 0
+                    const percentage = r.limit !== null && r.limit > 0 ? Math.round((r.spent / r.limit) * 100) : 0
+                    const saved = r.limit !== null ? Math.max(0, r.limit - r.spent) : null
+                    let statusColor = 'text-gray-400'
+                    let statusText = '—'
+
+                    if (r.limit !== null) {
+                      // Only compute status when a limit exists
+                      if (percentage > 100) {
+                        statusColor = 'text-red-600'
+                        statusText = '✗ Vượt quá'
+                      } else if (percentage > 80) {
+                        statusColor = 'text-orange-600'
+                        statusText = '⚠ Gần hết'
+                      } else {
+                        statusColor = 'text-green-600'
+                        statusText = '✓ Ok'
+                      }
+                    }
+
+                    return (
+                      <tr key={r.month} className='border-b hover:bg-gray-50'>
+                        <td className='py-2 px-2 font-semibold'>Tháng {r.month}</td>
+                        <td className='py-2 px-2 text-right'>{formatVND(r.spent)}</td>
+                        <td className='py-2 px-2 text-right'>{r.limit !== null ? formatVND(r.limit) : '—'}</td>
+                        <td className={`py-2 px-2 text-right font-semibold ${saved !== null && saved > 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                          {saved !== null ? formatVND(saved) : '—'}
+                        </td>
+                        <td className={`py-2 px-2 text-right font-semibold ${exceeded > 0 ? 'text-red-600' : 'text-gray-600'}`}>
+                          {r.limit !== null && exceeded > 0 ? formatVND(exceeded) : '—'}
+                        </td>
+                        <td className={`py-2 px-2 text-right font-semibold ${statusColor}`}>
+                          {statusText}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  <tr className='font-bold bg-blue-50 border-t-2 border-gray-300'>
+                    <td className='py-2 px-2'>TỔNG NĂM</td>
+                    <td className='py-2 px-2 text-right'>{formatVND(yearlySummary.reduce((s, r) => s + (r.limit !== null ? r.spent : 0), 0))}</td>
+                    <td className='py-2 px-2 text-right'>{formatVND(yearlySummary.reduce((s, r) => s + (r.limit !== null ? r.limit : 0), 0))}</td>
+                    <td className='py-2 px-2 text-right text-green-600'>{formatVND(yearlySummary.reduce((s, r) => s + (r.limit !== null ? Math.max(0, r.limit - r.spent) : 0), 0))}</td>
+                    <td className='py-2 px-2 text-right text-red-600'>{formatVND(yearlySummary.reduce((s, r) => s + (r.limit !== null ? Math.max(0, r.spent - r.limit) : 0), 0))}</td>
+                    <td className='py-2 px-2 text-right'>
+                      {(() => {
+                        const totalLimit = yearlySummary.reduce((s, r) => s + (r.limit !== null ? r.limit : 0), 0)
+                        const totalSaved = yearlySummary.reduce((s, r) => s + (r.limit !== null ? Math.max(0, r.limit - r.spent) : 0), 0)
+                        return totalLimit > 0 ? `${Math.round((totalSaved / totalLimit) * 100)}%` : '—'
+                      })()}
                     </td>
                   </tr>
             </tbody>

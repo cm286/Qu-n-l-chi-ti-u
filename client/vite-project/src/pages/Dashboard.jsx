@@ -82,11 +82,11 @@ function Dashboard({ isDark, setIsDark }) {
   const [showExactRemaining, setShowExactRemaining] = useState(false)
 
   // Derived limit for the selected month
-  const monthlyLimit = Number(monthlyLimits[selectedMonth] ?? 1000)
+  const monthlyLimit = Number(monthlyLimits[selectedMonth] ?? 0)
 
   // Sync limitInput when selectedMonth or monthlyLimits change
   useEffect(() => {
-    setLimitInput(monthlyLimits[selectedMonth] ?? 1000)
+    setLimitInput(monthlyLimits[selectedMonth] ?? 0)
     // Load category budgets for the selected month
     const monthBudgets = categoryBudgets[selectedMonth] || {}
     // Ensure all custom categories exist with default 0
@@ -569,7 +569,7 @@ function Dashboard({ isDark, setIsDark }) {
           <div className={`${isDark ? 'bg-red-900 border-red-700 text-red-200' : 'bg-red-100 border-red-400 text-red-700'} border px-4 py-3 rounded-xl flex items-center gap-2`}>
             <AlertTriangle className='w-5 h-5 text-red-600' />
             <p className='font-semibold'>
-              ⚠️ Cảnh báo: Chi tiêu {formatMonthVN(selectedMonth)} ({formatVNDSmart(monthStats.total)}) đã vượt quá định mức ({formatVNDSmart(monthStats.total-monthlyLimit)})!
+              ⚠️ Cảnh báo: Chi tiêu {formatMonthVN(selectedMonth)}: ({formatVNDSmart(monthStats.total)}) đã vượt quá định mức: ({formatVNDSmart(monthStats.total-monthlyLimit)})!           Định mức tháng {formatMonthVN(selectedMonth)}: {formatVNDSmart(monthlyLimit)}
             </p>
           </div>
         </div>
