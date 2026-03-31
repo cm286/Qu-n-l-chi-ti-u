@@ -18,7 +18,7 @@ function TransactionList({
       Food: '#10b981',
       Transport: '#3b82f6',
       Entertainment: '#05020eff',
-      Entertaiment: '#05020eff',
+      Entertainment: '#05020eff',
       Shopping: '#ec4899',
       Bills: '#ef4444',
       Others: '#6b7280',

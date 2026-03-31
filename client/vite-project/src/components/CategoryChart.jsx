@@ -7,7 +7,7 @@ const CATEGORY_COLORS = {
   'Food': '#10b981',        // Green - Ăn uống
   'Transport': '#3b82f6',   // Blue - Đi lại
   'Shopping': '#ec4899',    // Pink - Mua sắm
-  'Entertaiment': '#8b5cf6', // Purple - Giải trí
+  'Entertainment': '#8b5cf6', // Purple - Giải trí
   'Bills': '#ef4444',       // Red - Hóa đơn
   'Others': '#6b7280',      // Gray - Khác
 }

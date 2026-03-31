@@ -95,7 +95,7 @@ function Dashboard({ isDark, setIsDark }) {
       if (!(c in merged)) merged[c] = 0
     }
     // Also ensure default categories exist
-    const defaults = ['Food', 'Transport', 'Shopping', 'Entertaiment', 'Bills', 'Others']
+    const defaults = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Others']
     for (const d of defaults) {
       if (!(d in merged)) merged[d] = 0
     }
@@ -106,7 +106,7 @@ function Dashboard({ isDark, setIsDark }) {
   useEffect(() => {
     const monthKey = selectedMonth
     const warnings = []
-    const categories = ['Food', 'Transport', 'Shopping', 'Entertaiment', 'Bills', 'Others', ...customCategories]
+    const categories = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Others', ...customCategories]
 
     const monthBudgets = categoryBudgets[monthKey] || {}
 
@@ -346,7 +346,7 @@ function Dashboard({ isDark, setIsDark }) {
     const categoryName = newCategoryInput.trim()
     
     // Kiểm tra danh mục đã tồn tại
-    const allCategories = ['Food', 'Transport', 'Shopping', 'Entertaiment', 'Bills', 'Others', ...customCategories]
+    const allCategories = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Others', ...customCategories]
     if (allCategories.includes(categoryName)) {
       alert('⚠️ Danh mục này đã tồn tại')
       return
@@ -788,7 +788,7 @@ function Dashboard({ isDark, setIsDark }) {
 
                 {/* Danh sách danh mục */}
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  {['Food', 'Transport', 'Shopping', 'Entertaiment', 'Bills', 'Others', ...customCategories].map((category) => {
+                  {['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Others', ...customCategories].map((category) => {
                     const totalOtherBudgets = Object.entries(categoryBudgetInputs || {})
                       .reduce((sum, [cat, val]) => cat !== category ? sum + (val || 0) : sum, 0)
                     const maxBudgetForCategory = (limitInput || 0) - totalOtherBudgets

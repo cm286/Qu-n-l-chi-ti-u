@@ -4,7 +4,7 @@ export const toVN = (category) => {
     'Food': 'Ăn uống',
     'Transport': 'Giao thông',
     'Shopping': 'Mua sắm',
-    'Entertaiment': 'Giải trí',
+    'Entertainment': 'Giải trí',
     'Bills': 'Hóa đơn',
     'Others': 'Khác',
     'Food': 'Ăn uống',
@@ -49,7 +49,7 @@ export const DEFAULT_CATEGORIES = [
   { value: 'Food', label: 'Ăn uống' },
   { value: 'Transport', label: 'Giao thông' },
   { value: 'Shopping', label: 'Mua sắm' },
-  { value: 'Entertaiment', label: 'Giải trí' },
+  { value: 'Entertainment', label: 'Giải trí' },
   { value: 'Bills', label: 'Hóa đơn' },
   { value: 'Others', label: 'Khác' },
 ];

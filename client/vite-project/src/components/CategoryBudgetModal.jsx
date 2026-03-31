@@ -4,7 +4,7 @@ import { AlertCircle, Save, X } from 'lucide-react'
 const formatVND = (amount) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
 
-const CATEGORIES = ['Food', 'Transport', 'Shopping', 'Entertaiment', 'Bills', 'Others']
+const CATEGORIES = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Others']
 
 function CategoryBudgetModal({ isOpen, onClose, isDark, onSave }) {
   const [budgets, setBudgets] = useState({})

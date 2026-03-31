@@ -38,7 +38,7 @@
         ['Food', 0],
         ['Transport', 0],
         ['Shopping', 0],
-        ['Entertaiment', 0],
+        ['Entertainment', 0],
         ['Bills', 0],
         ['Others', 0]
       ])
