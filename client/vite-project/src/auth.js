@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000/api/v2/auth';
+const API_URL = 'https://expenses.onrender.com/api/v2/auth';
 
 export const registerUser = async (payload) => {
   const res = await fetch(`${API_URL}/register`, {
