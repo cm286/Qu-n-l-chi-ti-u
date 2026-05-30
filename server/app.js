@@ -14,4 +14,13 @@ app.use('/api/v2/expense', expenseRoute);
 app.use('/api/v2/auth', authRoute);
 
 module.exports = app;
-//111
+const cors = require("cors");
+
+app.use(
+    cors({
+        origin: [
+            "https://qu-n-l-chi-ti-u-tau.vercel.app"
+        ],
+        credentials: true,
+    })
+);
