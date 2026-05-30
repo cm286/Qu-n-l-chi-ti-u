@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://expenses.onrender.com/api/v2/expense';
+const API_URL = 'https://qu-n-l-chi-ti-u.onrender.com/api/v2/expense';
 
 // 🔐 Lấy header có token
 const getAuthHeader = () => {
@@ -60,7 +60,7 @@ export const deleteData = async (id) => {
 // 👤 Lấy thông tin người dùng
 export const getUserProfile = async () => {
   try {
-    const res = await axios.get('https://expenses.onrender.com/api/v2/auth/profile', getAuthHeader());
+    const res = await axios.get('https://qu-n-l-chi-ti-u.onrender.com/api/v2/auth/profile', getAuthHeader());
     return res.data.user;
   } catch (error) {
     console.error('❌ Fetch user profile failed:', error.response?.data || error.message);
@@ -72,7 +72,7 @@ export const getUserProfile = async () => {
 export const changePassword = async (currentPassword, newPassword, confirmPassword) => {
   try {
     const res = await axios.put(
-      'https://expenses.onrender.com/api/v2/auth/change-password',
+      'https://qu-n-l-chi-ti-u.onrender.com/api/v2/auth/change-password',
       { currentPassword, newPassword, confirmPassword },
       getAuthHeader()
     );
@@ -87,7 +87,7 @@ export const changePassword = async (currentPassword, newPassword, confirmPasswo
 export const updateProfile = async (name, avatar) => {
   try {
     const res = await axios.put(
-      'https://expenses.onrender.com/api/v2/auth/update-profile',
+      'https://qu-n-l-chi-ti-u.onrender.com/api/v2/auth/update-profile',
       { name, avatar },
       getAuthHeader()
     );
@@ -117,7 +117,7 @@ export const getMonthlyReport = async (month, year, monthlyLimit = null) => {
 // 💰 Lấy dữ liệu budget (định mức tháng, danh mục, custom categories)
 export const getBudgetData = async () => {
   try {
-    const res = await axios.get('https://expenses.onrender.com/api/v2/auth/budget-data', getAuthHeader());
+    const res = await axios.get('https://qu-n-l-chi-ti-u.onrender.com/api/v2/auth/budget-data', getAuthHeader());
     return res.data.data;
   } catch (error) {
     console.error('❌ Get budget data failed:', error.response?.data || error.message);
@@ -129,7 +129,7 @@ export const getBudgetData = async () => {
 export const saveBudgetData = async (budgetData) => {
   try {
     const res = await axios.put(
-      'https://expenses.onrender.com/api/v2/auth/budget-data',
+      'https://qu-n-l-chi-ti-u.onrender.com/api/v2/auth/budget-data',
       budgetData,
       getAuthHeader()
     );
