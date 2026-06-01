@@ -164,6 +164,16 @@ export const updateUserStatus = async (userId, payload) => {
   }
 };
 
+export const updateUserRole = async (userId, payload) => {
+  try {
+    const res = await axios.put(`${ADMIN_API}/users/${userId}/role`, payload, getAuthHeader());
+    return res.data;
+  } catch (error) {
+    console.error('❌ Update user role failed:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
 export const getGlobalCategories = async () => {
   try {
     const res = await axios.get(`${ADMIN_API}/categories`, getAuthHeader());

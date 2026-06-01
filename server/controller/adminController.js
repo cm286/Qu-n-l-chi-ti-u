@@ -38,6 +38,39 @@ exports.updateUserStatus = async (req, res) => {
   }
 };
 
+exports.updateUserRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Role không hợp lệ' });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (req.user._id.equals(user._id) && role !== 'admin') {
+      return res.status(400).json({ success: false, message: 'Không thể gỡ quyền admin chính bạn' });
+    }
+
+    user.role = role;
+    await user.save();
+
+    res.json({ success: true, user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    }});
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.getGlobalCategories = async (req, res) => {
   try {
     const categories = await Category.find().sort({ name: 1 });

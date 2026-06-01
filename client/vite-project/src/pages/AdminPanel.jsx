@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   getAdminSummary,
   getAdminUsers,
-  updateUserStatus,
-  getGlobalCategories,
+  updateUserStatus,  updateUserRole,  getGlobalCategories,
   createCategory,
   updateCategory,
   deleteCategory,
@@ -50,6 +49,15 @@ function AdminPanel() {
       setUsers((prev) => prev.map((item) => (item._id === user._id ? res.user : item)))
     } catch (err) {
       setError(err.response?.data?.message || 'Không thể cập nhật trạng thái người dùng')
+    }
+  }
+
+  const handleChangeRole = async (user) => {
+    try {
+      const res = await updateUserRole(user._id, { role: user.role === 'admin' ? 'user' : 'admin' })
+      setUsers((prev) => prev.map((item) => (item._id === user._id ? res.user : item)))
+    } catch (err) {
+      setError(err.response?.data?.message || 'Không thể cập nhật quyền người dùng')
     }
   }
 
@@ -162,6 +170,7 @@ function AdminPanel() {
                     <th className='px-4 py-3'>Email</th>
                     <th className='px-4 py-3'>Vai trò</th>
                     <th className='px-4 py-3'>Trạng thái</th>
+                    <th className='px-4 py-3'>Tình trạng</th>
                     <th className='px-4 py-3'>Hành động</th>
                   </tr>
                 </thead>
@@ -184,6 +193,16 @@ function AdminPanel() {
                         >
                           {user.isActive ? <Lock size={14} /> : <Unlock size={14} />} 
                           {user.isActive ? 'Khóa' : 'Kích hoạt'}
+                        </button>
+                      </td>
+                      <td className='px-4 py-3'>
+                        <button
+                          type='button'
+                          onClick={() => handleChangeRole(user)}
+                          className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ${user.role === 'admin' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+                        >
+                          <ShieldCheck size={14} />
+                          {user.role === 'admin' ? 'Gỡ admin' : 'Cấp admin'}
                         </button>
                       </td>
                     </tr>

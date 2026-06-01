@@ -8,6 +8,7 @@ router.use(protect, admin);
 
 router.get('/users', adminController.getAllUsers);
 router.put('/users/:id/status', adminController.updateUserStatus);
+router.put('/users/:id/role', adminController.updateUserRole);
 
 router.get('/categories', adminController.getGlobalCategories);
 router.post('/categories', adminController.createCategory);
