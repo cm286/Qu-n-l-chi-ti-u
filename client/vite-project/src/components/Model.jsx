@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { categories as CATEGORY_LIST, formatVNDSmart } from '../utils/categoryLabels'
 
 
-function Model({ isOpen, onsubmit, initialData, onclose, customCategories = [], categoryBudgets = {}, selectedMonth = '', expenses = [] }) {
+function Model({ isOpen, onsubmit, initialData, onclose, customCategories = [], categoryBudgets = {}, selectedMonth = '', expenses = [], categories = [] }) {
   const empty = {
     description: '',
     amount: '',
@@ -13,7 +13,7 @@ function Model({ isOpen, onsubmit, initialData, onclose, customCategories = [], 
   }
 
   // Lấy tất cả danh mục (mặc định + custom)
-  const defaultCategories = CATEGORY_LIST
+  const defaultCategories = categories.length > 0 ? categories : CATEGORY_LIST
   const allCategories = [
     ...defaultCategories,
     ...customCategories.map(cat => ({ value: cat, label: cat }))

@@ -9,6 +9,7 @@ import {
   SlidersHorizontal,
   Moon,
   Sun,
+  ShieldCheck,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import StatCard from '../components/StatCard'
@@ -22,7 +23,7 @@ import UserMenu from '../components/UserMenu'
 import UserProfile from '../components/UserProfile'
 import ChangePassword from '../components/ChangePassword'
 import EditProfile from '../components/EditProfile'
-import { fetchData, createData, deleteData, updateData, getBudgetData, saveBudgetData } from '../api'
+import { fetchData, createData, deleteData, updateData, getBudgetData, saveBudgetData, getGlobalCategories } from '../api'
 import CategoryBudgetInfo from '../components/CategoryBudgetInfo'
 import { categories as CATEGORY_LIST, formatVNDSmart, toVN } from '../utils/categoryLabels'
 
@@ -39,6 +40,13 @@ function Dashboard({ isDark, setIsDark }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false)
+  const [currentUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || 'null')
+    } catch {
+      return null
+    }
+  })
   const [editingExpense, setEditingExpense] = useState(null)
   // Lưu định mức theo từng tháng: object keyed by 'YYYY-MM'
   const [monthlyLimits, setMonthlyLimits] = useState(() => {
@@ -63,6 +71,7 @@ function Dashboard({ isDark, setIsDark }) {
       return []
     }
   })
+  const [globalCategories, setGlobalCategories] = useState(CATEGORY_LIST)
   const [newCategoryInput, setNewCategoryInput] = useState('')
   const [categoryWarnings, setCategoryWarnings] = useState([])
   const [limitInput, setLimitInput] = useState(null)
@@ -230,8 +239,20 @@ function Dashboard({ isDark, setIsDark }) {
       }
     }
 
+    const loadCategories = async () => {
+      try {
+        const res = await getGlobalCategories()
+        if (res.categories?.length) {
+          setGlobalCategories(res.categories.map((category) => ({ value: category.name, label: category.name })))
+        }
+      } catch (error) {
+        console.error('Error loading categories:', error)
+      }
+    }
+
     loadExpenses()
     loadBudgetData()
+    loadCategories()
   }, [])
 
   // ⚠️ Cảnh báo vượt định mức (so sánh theo tháng đang chọn)
@@ -420,7 +441,7 @@ function Dashboard({ isDark, setIsDark }) {
 
   // Tạo allCategories cho CategoryBudgetInfo
   const allCategories = [
-    ...CATEGORY_LIST,
+    ...globalCategories,
     ...customCategories.map(cat => ({ value: cat, label: cat }))
   ]
 
@@ -508,7 +529,15 @@ function Dashboard({ isDark, setIsDark }) {
           <div className='flex items-center gap-2 flex-wrap'>
             <Hello token={localStorage.getItem('token')} />
             <Export expenses={expenses} />
-            
+            {currentUser?.role === 'admin' && (
+              <button
+                onClick={() => navigate('/admin')}
+                className='px-3 py-2 bg-slate-700 text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-slate-800 transition-all'
+              >
+                <ShieldCheck className='w-3 h-3' />
+                <span className='hidden sm:inline'>Quản lý Admin</span>
+              </button>
+            )}
             <button
               onClick={() => setIsLimitOpen(true)}
               className='px-3 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-amber-600 transition-all'
@@ -682,6 +711,7 @@ function Dashboard({ isDark, setIsDark }) {
         categoryBudgets={categoryBudgets}
         selectedMonth={selectedMonth}
         expenses={expenses}
+        categories={allCategories}
       />
 
       {/* Modal Giới hạn + Định mức danh mục */}

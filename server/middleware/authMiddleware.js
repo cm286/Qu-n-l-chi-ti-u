@@ -31,6 +31,12 @@ exports.protect = async (req, res, next) => {
         .json({ success: false, message: 'User not found for this token' });
     }
 
+    if (!user.isActive) {
+      return res
+        .status(403)
+        .json({ success: false, message: 'Tài khoản đã bị khóa' });
+    }
+
     req.user = user;
     next();
   } catch (error) {

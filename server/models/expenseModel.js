@@ -16,7 +16,8 @@ const expenseSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Others'],
+      trim: true,
+      maxlength: 50,
     },
     date: {
       type: Date,

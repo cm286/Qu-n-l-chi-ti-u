@@ -25,7 +25,8 @@ exports.register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email đã tồn tại' });
     }
 
-    const user = await User.create({ name, email, password });
+    const defaultRole = (await User.countDocuments()) === 0 ? 'admin' : 'user';
+    const user = await User.create({ name, email, password, role: defaultRole });
     const token = generateToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
@@ -33,7 +34,12 @@ exports.register = async (req, res) => {
     user.refreshToken = refreshToken;
     await user.save();
 
-    res.status(201).json({ success: true, token, refreshToken, user: { id: user._id, name, email, avatar: user.avatar } });
+    res.status(201).json({
+      success: true,
+      token,
+      refreshToken,
+      user: { id: user._id, name, email, avatar: user.avatar, role: user.role, isActive: user.isActive },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -49,6 +55,10 @@ exports.login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Bạn đã nhập sai email hoặc mật khẩu' });
     }
 
+    if (!user.isActive) {
+      return res.status(403).json({ success: false, message: 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị.' });
+    }
+
     const token = generateToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
@@ -56,7 +66,19 @@ exports.login = async (req, res) => {
     user.refreshToken = refreshToken;
     await user.save();
 
-    res.json({ success: true, token, refreshToken, user: { id: user._id, name: user.name, email: user.email, avatar: user.avatar } });
+    res.json({
+      success: true,
+      token,
+      refreshToken,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        role: user.role,
+        isActive: user.isActive,
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -121,16 +143,18 @@ exports.getUserProfile = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    res.json({ 
-      success: true, 
-      user: { 
-        id: user._id, 
-        name: user.name, 
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
         email: user.email,
         avatar: user.avatar,
+        role: user.role,
+        isActive: user.isActive,
         createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      } 
+        updatedAt: user.updatedAt,
+      },
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

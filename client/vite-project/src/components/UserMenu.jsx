@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { saveBudgetData } from '../api'
-import { User, Lock, LogOut, ChevronDown } from 'lucide-react'
+import { User, Lock, LogOut, ChevronDown, ShieldCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 export default function UserMenu({ onOpenProfile, onOpenChangePassword, onOpenEditProfile }) {
@@ -138,6 +138,19 @@ export default function UserMenu({ onOpenProfile, onOpenChangePassword, onOpenEd
               <Lock size={18} className="text-green-500" />
               <span>Đổi mật khẩu</span>
             </button>
+
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => {
+                  setIsOpen(false)
+                  navigate('/admin')
+                }}
+                className="w-full px-4 py-3 flex items-center gap-3 text-gray-700 hover:bg-blue-50 transition-colors text-left"
+              >
+                <ShieldCheck size={18} className="text-blue-500" />
+                <span>Admin panel</span>
+              </button>
+            )}
 
             {/* Divider */}
             <div className="my-2 border-t"></div>

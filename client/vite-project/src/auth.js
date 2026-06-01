@@ -1,4 +1,4 @@
-const API_URL = 'https://qu-n-l-chi-ti-u.onrender.com/api/v2/auth';
+const API_URL = import.meta.env.VITE_API_URL || 'https://qu-n-l-chi-ti-u.onrender.com/api/v2/auth';
 
 export const registerUser = async (payload) => {
   const res = await fetch(`${API_URL}/register`, {

@@ -23,12 +23,20 @@
     avatar: {
       type: String,
       default: null
-    }
-    ,
+    },
     refreshToken: {
       type: String,
       default: null,
       select: false
+    },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user'
+    },
+    isActive: {
+      type: Boolean,
+      default: true
     },
     // 💰 Định mức cho từng danh mục
     categoryBudgets: {

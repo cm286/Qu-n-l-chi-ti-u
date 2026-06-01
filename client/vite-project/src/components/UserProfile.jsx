@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { User, Mail, Calendar, X } from 'lucide-react'
+import { User, Mail, Calendar, X, ShieldCheck } from 'lucide-react'
 import { getUserProfile } from '../api'
 
 export default function UserProfile({ isOpen, onClose }) {
@@ -84,6 +84,24 @@ export default function UserProfile({ isOpen, onClose }) {
               <div>
                 <p className="text-sm text-gray-600">Email</p>
                 <p className="text-lg font-semibold text-gray-800">{user.email}</p>
+              </div>
+            </div>
+
+            {/* Role */}
+            <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
+              <ShieldCheck className="text-blue-500" size={20} />
+              <div>
+                <p className="text-sm text-gray-600">Vai trò</p>
+                <p className="text-lg font-semibold text-gray-800 capitalize">{user.role || 'user'}</p>
+              </div>
+            </div>
+
+            {/* Trạng thái */}
+            <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
+              <Calendar className="text-orange-500" size={20} />
+              <div>
+                <p className="text-sm text-gray-600">Trạng thái tài khoản</p>
+                <p className="text-lg font-semibold text-gray-800">{user.isActive ? 'Hoạt động' : 'Đã khóa'}</p>
               </div>
             </div>
 
